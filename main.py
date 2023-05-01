@@ -26,7 +26,7 @@ def get_data():
 
 
 def get_connection():
-    con = sqlite3.connect('item_history.db', isolation_level=None)
+    con = sqlite3.connect('../db/item_history.db', isolation_level=None)
     con.execute('pragma journal_mode=wal;')
     cur = con.cursor()
     return con, cur
@@ -44,12 +44,17 @@ def populate_item_list():
         if item_id not in items_checked and item_id not in existing_ids:
             items_checked.append(item_id)
             try:
-                item_name, item_type = item_list.get_item_data(item_id, logger)
-                logger.info(f'data for {item_id}: {item_name}, {item_type}')
+                name, type, subclass, desc = item_list.get_item_data(
+                    item_id, logger
+                )
+                logger.info(f'data for {item_id}: '
+                            f'{name}, {type}, {subclass}, {desc}')
             except Exception as e:
                 logger.error(e)
-            if item_name is not None:
-                item_list.insert_into_item_list(item_id, item_name, item_type)
+            if name:
+                item_list.insert_into_item_list(
+                    item_id, name, type, subclass, desc
+                )
     con.close()
 
 
@@ -60,7 +65,9 @@ async def hourly_check(logger):
         con, cur = get_connection()
         id_list = [id[0] for id in cur.execute('SELECT id FROM item_list')]
         new_list = []
-        existing_tables = [name[0] for name in cur.execute("SELECT name FROM sqlite_master WHERE type='table';")]
+        existing_tables = [name[0] for name in cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table';"
+        )]
         comm = get_data()
         for c in comm:
             id = c.get('item').get('id')
@@ -68,13 +75,17 @@ async def hourly_check(logger):
         for item in id_list:
             if item not in new_list:
                 try:
-                    item_name, item_type = item_list.get_item_data(item, logger)
+                    name, type, subclass, desc = item_list.get_item_data(
+                        item, logger
+                    )
                 except Exception as e:
                     logger.error(e)
-                if item_name is not None:
-                    item_list.insert_into_item_list(item, item_name, item_type)
+                if name is not None:
+                    item_list.insert_into_item_list(
+                        item, name, type, subclass, desc
+                    )
                 if str(item) not in existing_tables:
-                    query = 'CREATE TABLE if NOT EXISTS {} (id INTEGER, lowest_price INTEGER, amount_on_sale INTEGER, time TEXT)'.format(f'[{item}]')
+                    query = 'CREATE TABLE if NOT EXISTS {} (id INTEGER, lowest_price INTEGER, amount_on_sale INTEGER, sellers INTEGER, time TEXT)'.format(f'[{item}]')
                     cur.execute(query)
                     con.commit()
         logger.info('check for new items done')
@@ -90,8 +101,10 @@ async def hourly_check(logger):
 async def main(logger):
     logger.info('started first item_list')
     populate_item_list()
+    con, cur = get_connection()
     logger.info('started first tables')
     item_prices.get_tables()
+    con.close()
     while True:
         await hourly_check(logger)
 

@@ -2,7 +2,7 @@ import datetime
 import pytz
 
 import main
+import item_prices
 
-con, cur = main.get_connection()
-names = [name[0] for name in cur.execute("SELECT name FROM sqlite_master WHERE type='table';")]
-print(names)
+
+con, cur = main.get_connec

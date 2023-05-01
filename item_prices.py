@@ -18,7 +18,7 @@ def get_tables():
     id_list = [id[0] for id in cur.execute('SELECT id FROM item_list')]
     for id in id_list:
         item_id = f'[{id}]'
-        query = 'CREATE TABLE if NOT EXISTS {} (id INTEGER, lowest_price INTEGER, amount_on_sale INTEGER, time TEXT)'.format(item_id)
+        query = 'CREATE TABLE if NOT EXISTS {} (id INTEGER, lowest_price INTEGER, amount_on_sale INTEGER, sellers INTEGER, time TEXT)'.format(item_id)
         cur.execute(query)
         con.commit()
         logger.info(f'table {id} created')
@@ -36,11 +36,13 @@ def get_price_data_and_populate(main_logger):
     for id in id_list:
         total_amount = 0
         prices = {}
+        sellers = 0
         for commodity in commodities:
             if commodity.get('item').get('id') == id:
                 price = commodity.get('unit_price')
                 quantity = commodity.get('quantity')
                 prices[price] = quantity
+                sellers += 1
         for value in prices.values():
             total_amount += value
         try:
@@ -50,10 +52,10 @@ def get_price_data_and_populate(main_logger):
             lowest_price = 0
         time_now = datetime.datetime.now(pytz.timezone('CET'))
         time_now = time_now.strftime("%Y-%m-%d %H:%M:%S")
-        to_insert = [id, lowest_price, total_amount, time_now]
+        to_insert = [id, lowest_price, total_amount, sellers, time_now]
         table = f'[{id}]'
         if str(id) in tables:
-            query = 'INSERT INTO {} (id, lowest_price, amount_on_sale, time) VALUES (?,?,?,?)'.format(table)
+            query = 'INSERT INTO {} (id, lowest_price, amount_on_sale, sellers, time) VALUES (?,?,?,?,?)'.format(table)
             cur.execute(query, to_insert)
             con.commit()
             logger.info(f'info for {id} inserted')
