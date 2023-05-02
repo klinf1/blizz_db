@@ -35,18 +35,17 @@ def get_price_data_and_populate(main_logger):
     id_list = [id[0] for id in cur.execute('SELECT id FROM item_list')]
     for id in id_list:
         total_amount = 0
-        prices = {}
+        prices = []
         sellers = 0
         for commodity in commodities:
             if commodity.get('item').get('id') == id:
                 price = commodity.get('unit_price')
                 quantity = commodity.get('quantity')
-                prices[price] = quantity
+                prices.append(price)
                 sellers += 1
-        for value in prices.values():
-            total_amount += value
+                total_amount += quantity
         try:
-            lowest_price = min(list(prices.keys()))
+            lowest_price = min(prices)
         except Exception as e:
             logger.error(f'failed to find price for {id} {e}')
             lowest_price = 0
